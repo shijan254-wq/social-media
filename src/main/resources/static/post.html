@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post — SIMU</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .comment-item {
+            display: flex;
+            gap: 12px;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .comment-body {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 10px;
+        }
+        
+        .comment-header h5 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .comment-header span {
+            font-size: 12px;
+            color: var(--gray);
+        }
+        
+        .comment-content {
+            font-size: 14px;
+            color: var(--dark);
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        
+        .comment-delete {
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .comment-delete:hover {
+            background: #fee;
+            color: var(--danger);
+        }
+        
+        .comment-form {
+            display: flex;
+            gap: 12px;
+            padding-top: 15px;
+            border-top: 2px solid var(--border);
+            margin-top: 15px;
+        }
+        
+        .comment-form textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+            background: var(--bg);
+            color: var(--dark);
+            transition: all 0.2s;
+        }
+        
+        .comment-form textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+        }
+        
+        .comment-form button {
+            align-self: flex-end;
+            padding: 12px 20px;
+            height: 44px;
+        }
+    </style>
+    
+    </head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="container">
+    <a href="/feed.html" class="btn btn-ghost" style="margin-bottom: 20px;">
+        <i class="fas fa-arrow-left"></i> Rudi Feed
+    </a>
+    
+    <div id="postDetail">
+        <div class="loading">
+            <div class="spinner"></div>
+            Inapakia post...
+        </div>
+    </div>
+    
+    <!-- COMMENTS SECTION -->
+    <div class="card" id="commentsSection" style="display: none;">
+        <h3 class="card-title">
+            <i class="fas fa-comments"></i> Comments (<span id="commentsCount">0</span>)
+        </h3>
+        
+        <div id="commentsList">
+            <div class="loading">
+                <div class="spinner"></div>
+                Inapakia comments...
+            </div>
+        </div>
+        
+        <!-- Comment Form -->
+        <div class="comment-form">
+            <textarea id="commentInput" placeholder="Andika comment yako..." rows="1"></textarea>
+            <div style="display: flex; gap: 8px; align-self: flex-end;">
+                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker(event, 'commentInput')" 
+                        style="background: none; border: 2px solid var(--border); 
+                               padding: 8px 12px; border-radius: 10px; font-size: 18px; 
+                               cursor: pointer; transition: all 0.2s;"
+                        title="Ongeza emoji"
+                >😊</button>
+                <button class="btn btn-primary" onclick="submitComment()">
+                    <i class="fas fa-paper-plane"></i> Tuma
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+// ============================================
+// POST DETAIL PAGE
+// ============================================
+let currentPostId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    initDarkMode();
+    renderNavbar();
+    
+    // Angalia kama ameingia
+    if (!Auth.isLoggedIn()) {
+        window.location.href = '/login.html';
+        return;
+    }
+    
+    const params = new URLSearchParams(window.location.search);
+    currentPostId = params.get('id');
+    
+    if (!currentPostId) {
+        window.location.href = '/feed.html';
+        return;
+    }
+    
+    // Load post
+    await loadPost();
+    
+    // Load comments
+    await loadComments();
+    
+    // Auto-resize textarea
+    const textarea = document.getElementById('commentInput');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Enter kutuma (Shift+Enter kwa mstari mpya)
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitComment();
+        }
+    });
+});
+
+// ============================================
+// LOAD POST
+// ============================================
+async function loadPost() {
+    const postEl = document.getElementById('postDetail');
+    const res = await API.getPost(currentPostId);
+    
+    if (!res.success) {
+        postEl.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Post haipatikani</h3>
+                <p>${res.message || ''}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    postEl.innerHTML = renderPost(res.data);
+}
+
+// ============================================
+// LOAD COMMENTS
+// ============================================
+async function loadComments() {
+    const section = document.getElementById('commentsSection');
+    const list = document.getElementById('commentsList');
+    
+    section.style.display = 'block';
+    
+    const res = await API.getComments(currentPostId);
+    
+    if (!res.success) {
+        list.innerHTML = `
+            <div class="empty" style="padding: 30px;">
+                <p>Imeshindikana kupata comments</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const comments = res.data || [];
+    document.getElementById('commentsCount').textContent = comments.length;
+    
+    if (comments.length === 0) {
+        list.innerHTML = `
+            <div class="empty" style="padding: 40px 20px;">
+                <div class="empty-icon" style="font-size: 40px;">
+                    <i class="fas fa-comment-dots"></i>
+                </div>
+                <h3 style="font-size: 16px;">Hakuna comments bado</h3>
+                <p style="font-size: 14px;">Kuwa wa kwanza kucomment!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const currentUser = Auth.getUser();
+    
+    list.innerHTML = comments.map(c => {
+        const isOwn = currentUser && currentUser.id === c.userId;
+        
+        return `
+            <div class="comment-item">
+                <div class="comment-avatar">${getInitial(c.fullName || c.username)}</div>
+                <div class="comment-body">
+                    <div class="comment-header">
+                        <div>
+                            <h5>${escapeHtml(c.fullName || c.username)}</h5>
+                            <span>@${escapeHtml(c.username)} · ${formatDate(c.createdAt)}</span>
+                        </div>
+                        ${isOwn ? `
+                            <button class="comment-delete" onclick="deleteComment(${c.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="comment-content">${escapeHtml(c.content)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// SUBMIT COMMENT
+// ============================================
+async function submitComment() {
+    const textarea = document.getElementById('commentInput');
+    const content = textarea.value.trim();
+    
+    if (!content) {
+        return showToast('Andika comment kwanza', 'error');
+    }
+    
+    const user = Auth.getUser();
+    
+    // Disable button
+    const btn = document.querySelector('.comment-form button.btn-primary');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    const res = await API.createComment(currentPostId, user.id, { content });
+    
+    if (res.success) {
+        textarea.value = '';
+        textarea.style.height = '44px';
+        showToast('Comment imeongezwa!', 'success');
+        
+        // Reload comments
+        await loadComments();
+        
+        // Update post comments count
+        await loadPost();
+    } else {
+        showToast(res.message || 'Imeshindikana', 'error');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+}
+
+// ============================================
+// DELETE COMMENT
+// ============================================
+async function deleteComment(commentId) {
+    if (!confirm('Futa comment hii?')) return;
+    
+    const user = Auth.getUser();
+    const res = await API.deleteComment(commentId, user.id);
+    
+    if (res.success) {
+        showToast('Comment imefutwa', 'success');
+        await loadComments();
+        await loadPost();
+    } else {
+        showToast(res.message || 'Imeshindikana', 'error');
+    }
+}
+</script>
+<script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('✅ Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('❌ Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mipangilio — SIMU</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    </head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="container">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-edit"></i> Badilisha Profile
+        </h2>
+        
+        <div id="message" class="msg"></div>
+        
+        <form id="settingsForm">
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Jina Kamili</label>
+                <input type="text" id="fullName" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-quote-left"></i> Bio</label>
+                <textarea id="bio" placeholder="Niambie kuhusu wewe..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-image"></i> Picha ya Profile (URL)</label>
+                <input type="text" id="profilePicture" placeholder="https://...">
+            </div>
+            
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Hifadhi
+                </button>
+                <a href="/feed.html" class="btn btn-ghost">
+                    <i class="fas fa-times"></i> Ghairi
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    renderNavbar();
+    
+    if (!Auth.isLoggedIn()) {
+        window.location.href = '/login.html';
+        return;
+    }
+    
+    const user = Auth.getUser();
+    
+    const res = await API.getUser(user.id);
+    
+    if (res.success) {
+        document.getElementById('fullName').value = res.data.fullName || '';
+        document.getElementById('bio').value = res.data.bio || '';
+        document.getElementById('profilePicture').value = res.data.profilePicture || '';
+    }
+    
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            fullName: document.getElementById('fullName').value.trim(),
+            bio: document.getElementById('bio').value.trim(),
+            profilePicture: document.getElementById('profilePicture').value.trim()
+        };
+        
+        const res = await API.updateProfile(user.id, data);
+        const msg = document.getElementById('message');
+        
+        if (res.success) {
+            msg.textContent = 'Profile imebadilishwa!';
+            msg.className = 'msg success show';
+            
+            user.fullName = data.fullName;
+            Auth.saveUser(user);
+            
+            showToast('Profile imehifadhiwa!', 'success');
+        } else {
+            msg.textContent = res.message || 'Imeshindikana';
+            msg.className = 'msg error show';
+        }
+    });
+});
+</script>
+<script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('✅ Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('❌ Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tafuta — SIMU</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    </head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="container">
+    <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 800;" id="searchTitle">
+        <i class="fas fa-search"></i> Tafuta Watumiaji
+    </h2>
+    
+    <div id="results">
+        <div class="loading">
+            <div class="spinner"></div>
+            Inatafuta...
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    renderNavbar();
+    
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    
+    if (!q) {
+        window.location.href = '/feed.html';
+        return;
+    }
+    
+    document.getElementById('searchTitle').innerHTML = `<i class="fas fa-search"></i> Matokeo ya: "${q}"`;
+    
+    const res = await API.searchUsers(q);
+    const resultsEl = document.getElementById('results');
+    
+    if (!res.success || !res.data || res.data.length === 0) {
+        resultsEl.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon"><i class="fas fa-search"></i></div>
+                <h3>Hakuna matokeo</h3>
+                <p>Jaribu kutafuta kwa jina lingine</p>
+            </div>`;
+        return;
+    }
+    
+    resultsEl.innerHTML = res.data.map(user => `
+        <div class="card" style="display: flex; align-items: center; gap: 15px;">
+            <div class="post-avatar">${getInitial(user.fullName || user.username)}</div>
+            <div style="flex: 1;">
+                <h4 style="font-weight: 700;">${escapeHtml(user.fullName || user.username)}</h4>
+                <p style="color: var(--gray); font-size: 14px;">@${escapeHtml(user.username)}</p>
+                ${user.bio ? `<p style="color: var(--gray); font-size: 14px; margin-top: 5px;">${escapeHtml(user.bio)}</p>` : ''}
+            </div>
+            <a href="/profile.html?id=${user.id}" class="btn btn-primary">
+                <i class="fas fa-eye"></i> Ona
+            </a>
+        </div>
+    `).join('');
+});
+</script>
+<script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('✅ Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('❌ Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
+</body>
+</html>

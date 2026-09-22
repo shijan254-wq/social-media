@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingia — SIMU</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    </head>
+<body>
+
+<div class="auth-wrap">
+    <div class="auth-box">
+        <div class="auth-logo">SIMU<span>.</span></div>
+        
+        <div class="auth-header">
+            <h1>Karibu Tena! 👋</h1>
+            <p>Ingia kwenye akaunti yako</p>
+        </div>
+        
+        <div id="message" class="msg"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Username au Email</label>
+                <input type="text" id="username" placeholder="juma123" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i> Ingia
+            </button>
+        </form>
+        
+        <div class="auth-footer">
+            Hauna akaunti? <a href="/register.html">Jisajili Sasa</a>
+        </div>
+        
+        <div class="auth-footer" style="margin-top: 10px;">
+            <a href="/" style="color: #999;"><i class="fas fa-arrow-left"></i> Rudi Nyumbani</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('✅ Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('❌ Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
+</body>
+</html>
